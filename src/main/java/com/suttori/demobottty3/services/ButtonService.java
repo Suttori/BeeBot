@@ -11,14 +11,7 @@ import java.util.ArrayList;
 @Component
 public class ButtonService {
 
-    public SendMessage test1(Message message) {
-        return SendMessage.builder()
-                .text("test text")
-                .chatId(message.getChatId())
-                .build();
-    }
-
-    public SendMessage generateButton(Message message) {
+    public void generateButton(Message message) {
         var markup = new ReplyKeyboardMarkup();
         var keyboardRows = new ArrayList<KeyboardRow>();
         KeyboardRow row1 = new KeyboardRow();
@@ -36,6 +29,5 @@ public class ButtonService {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(message.getChatId());
         sendMessage.setReplyMarkup(markup);
-        return sendMessage;
     }
 }
