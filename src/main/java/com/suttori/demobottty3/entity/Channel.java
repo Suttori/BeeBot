@@ -11,6 +11,15 @@ public class Channel {
     private String channelName;
     private String channelUsername;
     private Long userId;
+    private String username;
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
     public Long getChannelId() {
         return channelId;
@@ -51,6 +60,7 @@ public class Channel {
                 ", channelName='" + channelName + '\'' +
                 ", channelUsername='" + channelUsername + '\'' +
                 ", userId=" + userId +
+                ", username='" + username + '\'' +
                 '}';
     }
 }

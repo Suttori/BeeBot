@@ -1,7 +1,10 @@
 package com.suttori.demobottty3.handler;
 
+import com.suttori.demobottty3.entity.FlagController;
+import com.suttori.demobottty3.services.ButtonService;
 import com.suttori.demobottty3.services.ChannelService;
 import com.suttori.demobottty3.services.MessageService;
+import com.suttori.demobottty3.services.PostService;
 import com.suttori.demobottty3.telegram.TelegramSender;
 import com.suttori.demobottty3.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,52 +16,74 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 @Component
 public class MessageHandler implements Handler<Update> {
 
-    private boolean takeChannelFlag = false;
-
     ChannelService channelService;
     TelegramSender telegramSender;
-    MessageService messageService;
+    PostService postService;
+    ButtonService buttonService;
+    public static final FlagController flagController = new FlagController();
 
-    @Autowired
-    public MessageHandler(ChannelService channelService, TelegramSender telegramSender) {
+
+    public MessageHandler(ChannelService channelService, TelegramSender telegramSender, PostService postService, ButtonService buttonService, FlagController flagController) {
         this.channelService = channelService;
         this.telegramSender = telegramSender;
+        this.postService = postService;
+        this.buttonService = buttonService;
     }
 
     @Override
     public void choose(Update update) {
+
         Message message = update.getMessage();
-
-        if (message.getForwardFromChat() != null && takeChannelFlag) {
-            takeChannelFlag = false;
-            channelService.addChannel(update);
-        }
-
 
         if (message.hasText()) {
             switch (message.getText()) {
                 case "/start":
+                    buttonService.generateButton(update);
                     telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.START_MESSAGE, String.valueOf(message.getChatId())));
-                    break;
+                    return;
                 case "/add":
-                    takeChannelFlag = true;
+                    flagController.setTakeChannelFlag(true);
                     telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.ADD_CHANNEL, String.valueOf(message.getChatId())));
-                    break;
+                    return;
                 case "/help":
-                    messageService.help(message);
-                    break;
+                    telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.HELP, String.valueOf(message.getChatId())));
+                    return;
                 case "Создать пост":
-                    messageService.messageCreatePost(message);
-                    break;
+                    flagController.setNewPost(true);
+                    postService.chooseChannel(message);
+                    return;
                 case "Отложенные":
-                    break;
-                case "Помощь":
-                    messageService.messageHelp(message);
-                    break;
+                    return;
+                case "Обратная связь":
+                    telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.CONTACT, String.valueOf(message.getChatId())));
+                    return;
                 case "Настройки":
-                    messageService.setSettings(message);
-                    break;
+                    telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.SET_SETTINGS, String.valueOf(message.getChatId())));
+                    return;
             }
+        }
+
+        if (message.getForwardFromChat() != null && flagController.isTakeChannelFlag()) {
+            flagController.setTakeChannelFlag(false);
+            channelService.addChannel(update);
+            return;
+        }
+
+        if (flagController.isAddMedia()) {
+            flagController.setAddMedia(false);
+            postService.addMedia(message);
+            return;
+        }
+
+        if (flagController.isAddText()) {
+            flagController.setAddText(false);
+            postService.addText(message);
+            return;
+        }
+
+        if (flagController.isNewPost()) {
+            postService.createPost(message);
+            return;
         }
     }
 }

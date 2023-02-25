@@ -2,13 +2,13 @@ package com.suttori.demobottty3.telegram;
 
 import com.suttori.demobottty3.config.BotConfig;
 import com.suttori.demobottty3.processor.Processor;
-import com.suttori.demobottty3.services.ButtonService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
+import org.telegram.telegrambots.meta.api.methods.CopyMessage;
+import org.telegram.telegrambots.meta.api.objects.MessageId;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
 import org.telegram.telegrambots.meta.generics.BotOptions;
 import org.telegram.telegrambots.meta.generics.LongPollingBot;
@@ -22,22 +22,21 @@ public class TelegramUpdateReceiver implements LongPollingBot {
 
     private final BotConfig config;
     private final DefaultBotOptions botOptions;
-    private ButtonService buttonService;
     private Processor processor;
+
+
+    TelegramSender telegramSender;
+
 
     public TelegramUpdateReceiver(
             BotConfig config,
-        DefaultBotOptions botOptions) {
+            DefaultBotOptions botOptions, TelegramSender telegramSender) {
         this.config = config;
         this.botOptions = botOptions;
+        this.telegramSender = telegramSender;
     }
 
     @Autowired
-    public void setSendMessageService(ButtonService buttonService) {
-        this.buttonService = buttonService;
-    }
-
-        @Autowired
     public void setProcessor(Processor processor) {
         this.processor = processor;
     }
@@ -53,14 +52,12 @@ public class TelegramUpdateReceiver implements LongPollingBot {
     }
 
 
-
     @Override
     public void onUpdateReceived(Update update) {
-        buttonService.generateButton(update.getMessage());
+
+
         processor.process(update);
     }
-
-
 
 
     @Override
