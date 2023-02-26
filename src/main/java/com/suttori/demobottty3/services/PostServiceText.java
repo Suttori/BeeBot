@@ -8,41 +8,42 @@ import com.suttori.demobottty3.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.CopyMessage;
-import org.telegram.telegrambots.meta.api.methods.botapimethods.BotApiMethodMessage;
-import org.telegram.telegrambots.meta.api.methods.send.*;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageMedia;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
-import org.telegram.telegrambots.meta.api.objects.*;
-import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
-public class PostService {
+public class PostServiceText {
 
     TelegramSender telegramSender;
     List<Channel> channels;
-    Message messagePost;
-    CopyMessage copyMessage;
+    SendMessage sendMessage;
+
+
+    public SendMessage getSendMessage() {
+        return sendMessage;
+    }
 
     @Autowired
     ChannelRepository channelRepository;
-
-    Post post;
 
     String errorMessage;
     String successMessage;
 
     @Autowired
-    public PostService(TelegramSender telegramSender, Post post) {
+    public PostServiceText(TelegramSender telegramSender) {
         this.telegramSender = telegramSender;
-        this.post = post;
     }
 
     public void chooseChannel(Message message) {
@@ -77,10 +78,9 @@ public class PostService {
         }
     }
 
-
     public void publish(CallbackQuery callbackQuery) {
-        telegramSender.sendCopyMessage(copyMessage);
-
+        telegramSender.send(sendMessage);
+        sendMessage = null;
 //        if (post.getSendMessage() != null) {
 //            telegramSender.send(post.getSendMessage());
 //            post.setSendMessage(null);
@@ -139,42 +139,16 @@ public class PostService {
 
 
     public void createMessagePost(Message message) {
-        messagePost = new Message();
-        messagePost.setChat(message.getChat());
-        messagePost.setMessageId(message.getMessageId());
-        messagePost.setFrom(message.getFrom());
-        messagePost.setCaption(message.getCaption());
-        messagePost.setText(message.getText());
-        messagePost.setPhoto(message.getPhoto());
-        messagePost.setAudio(message.getAudio());
-        messagePost.setVideo(message.getVideo());
-        messagePost.setVoice(message.getVoice());
-        messagePost.setVideoNote(message.getVideoNote());
-        messagePost.setDocument(message.getDocument());
-        messagePost.setAnimation(message.getAnimation());
-        messagePost.setSticker(message.getSticker());
-        messagePost.setMediaGroupId(message.getMediaGroupId());
+        sendMessage = new SendMessage();
+        sendMessage.setChatId(message.getChatId());
+        sendMessage.setText(message.getText());
     }
 
     public void createPost(Message message) {
-//        if (message.hasText()) {
-//            post.setSendMessage(new SendMessage());
-//            post.getSendMessage().setChatId(message.getChatId());
-//            post.getSendMessage().setText(message.getText());
-//            post.getSendMessage().setReplyMarkup(createButtonPost(message));
-//            post.getSendMessage().enableNotification();
-//            telegramSender.send(post.getSendMessage());
-//        }
         createMessagePost(message);
-        copyMessage = copyMessage(message);
-        copyMessage.setReplyMarkup(createButtonPost());
-        telegramSender.sendCopyMessage(copyMessage);
-//            post.setSendPhoto(new SendPhoto());
-//            post.getSendPhoto().setChatId(message.getChatId());
-//            post.getSendPhoto().setPhoto(new InputFile(getPhotoFieldId(message)));
-//            post.getSendPhoto().setCaption(message.getCaption());
-//            post.getSendPhoto().setReplyMarkup(createButtonPost(message));
-//            telegramSender.sendPhoto(post.getSendPhoto());
+        sendMessage.setReplyMarkup(createButtonPost());
+        telegramSender.send(sendMessage);
+
 
     }
 
@@ -184,59 +158,20 @@ public class PostService {
 
     public void addText(Message message) {
         if (message.hasText()) {
-            messagePost.setCaption(message.getText());
-            copyMessage = copyMessage(messagePost);
-            copyMessage.setReplyMarkup(createButtonPost());
-            telegramSender.sendCopyMessage(copyMessage);
+            sendMessage.setText(message.getText());
+            sendMessage.setReplyMarkup(createButtonPost());
+            telegramSender.send(sendMessage);
             deleteMessage(message);
         }
     }
-
-//    public void addMedia(Message message) {
-//        if (!message.hasText()) {
-//            EditMessageMedia editMessageMedia = new EditMessageMedia();
-//            editMessageMedia.setChatId(messagePost.getChatId());
-//            editMessageMedia.setMedia(new InputMediaPhoto(getPhotoFieldId(message)));
-//
-//            try {
-//                telegramSender.execute(editMessageMedia);
-//            } catch (TelegramApiException e) {
-//                throw new RuntimeException(e);
-//            }
-////
-////            copyMessage = copyMessage(messagePost);
-////            copyMessage.setReplyMarkup(createButtonPost(message));
-////            telegramSender.sendCopyMessage(copyMessage);
-//
-////            post.setSendPhoto(new SendPhoto());
-////            post.getSendPhoto().setChatId(message.getChatId());
-////            post.getSendPhoto().setPhoto(new InputFile(getPhotoFieldId(message)));
-////            post.getSendPhoto().setCaption(post.getSendMessage().getText());
-////            post.getSendPhoto().setReplyMarkup(createButtonPost(message));
-////            telegramSender.sendPhoto(post.getSendPhoto());
-////
-////            deleteMessage(message);
-////            post.setSendMessage(null);
-//        }
-//    }
 
     public void prepareForPost() {
         InlineKeyboardMarkup inlineKeyboardMarkupPlug = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardPlug = new ArrayList<>();
         inlineKeyboardMarkupPlug.setKeyboard(keyboardPlug);
-        copyMessage.setReplyMarkup(inlineKeyboardMarkupPlug);
-        //copyMessage = copyMessage(messagePost);
-        telegramSender.sendCopyMessage(copyMessage);
-        copyMessage.setChatId(String.valueOf(channels.get(0).getChannelId()));
-//        if (post.getSendMessage() != null) {
-//            post.getSendMessage().setReplyMarkup(inlineKeyboardMarkupPlug);
-//            telegramSender.send(post.getSendMessage());
-//            post.getSendMessage().setChatId(String.valueOf(channels.get(0).getChannelId()));
-//        } else if (post.getSendPhoto() != null) {
-//            post.getSendPhoto().setReplyMarkup(inlineKeyboardMarkupPlug);
-//            telegramSender.sendPhoto(post.getSendPhoto());
-//            post.getSendPhoto().setChatId(String.valueOf(channels.get(0).getChannelId()));
-//        }
+        sendMessage.setReplyMarkup(inlineKeyboardMarkupPlug);
+        telegramSender.send(sendMessage);
+        sendMessage.setChatId(String.valueOf(channels.get(0).getChannelId()));
     }
 
     public void nextButton(CallbackQuery callbackQuery) {
@@ -288,14 +223,8 @@ public class PostService {
     }
 
     public void addCustomButton(CallbackQuery callbackQuery) {
-        if (post.getSendMessage() != null) {
 
-        }
-        if (post.getSendPhoto() != null) {
-
-        }
     }
-
 
     public EditMessageReplyMarkup createEditReplyMarkup(CallbackQuery callbackQuery) {
         var editMessageReplyMarkup = new EditMessageReplyMarkup();
@@ -306,39 +235,21 @@ public class PostService {
     }
 
     public void notification(CallbackQuery callbackQuery) {
-        if (copyMessage.getDisableNotification() == null) {
-            copyMessage.disableNotification();
+        if (sendMessage.getDisableNotification() == null) {
+            sendMessage.disableNotification();
         } else {
-            copyMessage.enableNotification();
+            sendMessage.enableNotification();
         }
         telegramSender.sendEditMessageReplyMarkup(createEditReplyMarkup(callbackQuery));
     }
 
-
-    SendMessage sendMessage = new SendMessage();
-
     public void preview(CallbackQuery callbackQuery) {
-
-
-        if (copyMessage != null){
-            sendMessage.setText(callbackQuery.getMessage().getText());
-            sendMessage.setChatId(callbackQuery.getMessage().getChatId());
-            sendMessage.setDisableWebPagePreview(true);
-            sendMessage.setReplyMarkup(createButtonPost());
-            deleteMessageCallbackQuery(callbackQuery);
-            copyMessage = null;
-            telegramSender.send(sendMessage);
-        }
-
-
         if (sendMessage.getDisableWebPagePreview() == null) {
             sendMessage.setDisableWebPagePreview(true);
         } else {
             sendMessage.enableWebPagePreview();
         }
         telegramSender.sendEditMessageReplyMarkup(createEditReplyMarkup(callbackQuery));
-
-
     }
 
     public InlineKeyboardMarkup createButtonPost() {
@@ -360,45 +271,31 @@ public class PostService {
         var cancel = new InlineKeyboardButton();
         var next = new InlineKeyboardButton();
 
-        if (messagePost.hasPhoto() || messagePost.hasAudio() || messagePost.hasAnimation() ||
-                messagePost.hasVideo()) {
-            ///TODO
-            if (messagePost.getCaption() != null) {
-                addMediaOrText.setText("Изменить текст");
-            } else {
-                addMediaOrText.setText("Добавить текст");
-            }
-            addMediaOrText.setCallbackData("add_text");
-            rowInLineOne.add(addMediaOrText);
-        }
+        addMediaOrText.setText("Изменить текст");
+
+        addMediaOrText.setCallbackData("add_text");
+        rowInLineOne.add(addMediaOrText);
+
+        addButton.setText("Добавить кнопки");
+        addButton.setCallbackData("add_button");
+        rowInLineOne.add(addButton);
 
 
-        if (messagePost.getMediaGroupId() == null) {
-            addButton.setText("Добавить кнопки");
-            addButton.setCallbackData("add_button");
-            rowInLineOne.add(addButton);
-        }
-
-
-
-        if (copyMessage.getDisableNotification() == null) {
+        if (sendMessage.getDisableNotification() == null) {
             notification.setText("Уведомление: вкл");
         } else {
             notification.setText("Уведомление: выкл");
         }
 
 
-
-        if (messagePost.hasText()) {
-
-            if (sendMessage.getDisableWebPagePreview() == null) {
-                preview.setText("Превью: вкл");
-            } else {
-                preview.setText("Превью: выкл");
-            }
-            preview.setCallbackData("preview");
-            rowInLineTwo.add(preview);
+        if (sendMessage.getDisableWebPagePreview() == null) {
+            preview.setText("Превью: вкл");
+        } else {
+            preview.setText("Превью: выкл");
         }
+        preview.setCallbackData("preview");
+        rowInLineTwo.add(preview);
+
 
         autoCaption.setText("Автоподпись");
         comment.setText("Комментарии");
@@ -430,31 +327,5 @@ public class PostService {
 
         inlineKeyboardMarkup.setKeyboard(keyboard);
         return inlineKeyboardMarkup;
-    }
-
-
-    public String getPhotoFieldId(Message message) {
-        List<PhotoSize> photos = message.getPhoto();
-        return photos.stream()
-                .max(Comparator.comparing(PhotoSize::getFileSize))
-                .orElseThrow().getFileId();
-    }
-
-    public CopyMessage copyMessage(Message message) {
-//        return new CopyMessage(String.valueOf(message.getChatId()),
-//                String.valueOf(message.getFrom().getId()), message.getMessageId());
-        return CopyMessage.builder()
-                .chatId(message.getChatId())
-                .fromChatId(message.getFrom().getId())
-                .messageId(message.getMessageId())
-                .messageThreadId(message.getMessageThreadId())
-                .caption(message.getCaption())
-                .parseMode("html")
-                .captionEntities(message.getCaptionEntities())
-//                .disableNotification(true)
-//                .replyToMessageId(message.getReplyToMessage().getMessageId())
-                .allowSendingWithoutReply(true)
-                .replyMarkup(message.getReplyMarkup())
-                .protectContent(message.getHasProtectedContent()).build();
     }
 }

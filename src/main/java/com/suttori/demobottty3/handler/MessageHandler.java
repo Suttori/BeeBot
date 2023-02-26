@@ -1,10 +1,7 @@
 package com.suttori.demobottty3.handler;
 
 import com.suttori.demobottty3.entity.FlagController;
-import com.suttori.demobottty3.services.ButtonService;
-import com.suttori.demobottty3.services.ChannelService;
-import com.suttori.demobottty3.services.MessageService;
-import com.suttori.demobottty3.services.PostService;
+import com.suttori.demobottty3.services.*;
 import com.suttori.demobottty3.telegram.TelegramSender;
 import com.suttori.demobottty3.util.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,14 +16,16 @@ public class MessageHandler implements Handler<Update> {
     ChannelService channelService;
     TelegramSender telegramSender;
     PostService postService;
+    PostServiceText postServiceText;
     ButtonService buttonService;
     public static final FlagController flagController = new FlagController();
 
 
-    public MessageHandler(ChannelService channelService, TelegramSender telegramSender, PostService postService, ButtonService buttonService, FlagController flagController) {
+    public MessageHandler(ChannelService channelService, TelegramSender telegramSender, PostService postService, PostServiceText postServiceText, ButtonService buttonService) {
         this.channelService = channelService;
         this.telegramSender = telegramSender;
         this.postService = postService;
+        this.postServiceText = postServiceText;
         this.buttonService = buttonService;
     }
 
@@ -50,7 +49,9 @@ public class MessageHandler implements Handler<Update> {
                     return;
                 case "Создать пост":
                     flagController.setNewPost(true);
+
                     postService.chooseChannel(message);
+                    postServiceText.chooseChannel(message);
                     return;
                 case "Отложенные":
                     return;
@@ -69,21 +70,30 @@ public class MessageHandler implements Handler<Update> {
             return;
         }
 
-        if (flagController.isAddMedia()) {
-            flagController.setAddMedia(false);
-            postService.addMedia(message);
-            return;
-        }
+//        if (flagController.isAddMedia()) {
+//            flagController.setAddMedia(false);
+//            postService.addMedia(message);
+//            return;
+//        }
 
         if (flagController.isAddText()) {
             flagController.setAddText(false);
+
+            if (postServiceText.getSendMessage() != null) {
+                postServiceText.addText(message);
+                return;
+            }
+
             postService.addText(message);
             return;
         }
 
         if (flagController.isNewPost()) {
+            if (message.hasText()) {
+                postServiceText.createPost(message);
+                return;
+            }
             postService.createPost(message);
-            return;
         }
     }
 }

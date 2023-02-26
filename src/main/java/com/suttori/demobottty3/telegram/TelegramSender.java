@@ -14,12 +14,11 @@ import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMem
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.MessageId;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 
@@ -47,16 +46,22 @@ public class TelegramSender extends DefaultAbsSender {
         return null;
     }
 
+    public void sendEditMessageReplyMarkup(EditMessageReplyMarkup editMessageReplyMarkup) {
+        try {
+            logger.info("Sending message to " + editMessageReplyMarkup.getChatId());
+            execute(editMessageReplyMarkup);
+        } catch (TelegramApiException e) {
+            logger.error("Error during sending message", e);
+        }
+    }
 
-
-    public SendMessage sendCopyMessage(CopyMessage copyMessage) {
+    public void sendCopyMessage(CopyMessage copyMessage) {
         try {
             logger.info("Sending message to " + copyMessage.getChatId());
             execute(copyMessage);
         } catch (TelegramApiException e) {
             logger.error("Error during sending message", e);
         }
-        return null;
     }
 
     public SendPhoto sendPhoto(SendPhoto sendPhoto) {
@@ -90,6 +95,7 @@ public class TelegramSender extends DefaultAbsSender {
             logger.info("ReplyKeyboardMarkup send without text ");
         }
     }
+
 
 
     public void deleteMessage(CopyMessage message) {
