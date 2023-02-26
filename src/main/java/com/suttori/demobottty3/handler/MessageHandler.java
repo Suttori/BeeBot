@@ -1,12 +1,10 @@
 package com.suttori.demobottty3.handler;
 
-import com.suttori.demobottty3.entity.FlagController;
+import com.suttori.demobottty3.entity.Channel;
 import com.suttori.demobottty3.services.*;
 import com.suttori.demobottty3.telegram.TelegramSender;
 import com.suttori.demobottty3.util.Constants;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
@@ -18,15 +16,17 @@ public class MessageHandler implements Handler<Update> {
     PostService postService;
     PostServiceText postServiceText;
     ButtonService buttonService;
-    public static final FlagController flagController = new FlagController();
+    UserService userService;
 
 
-    public MessageHandler(ChannelService channelService, TelegramSender telegramSender, PostService postService, PostServiceText postServiceText, ButtonService buttonService) {
+    public MessageHandler(ChannelService channelService, TelegramSender telegramSender, PostService postService,
+                          PostServiceText postServiceText, ButtonService buttonService, UserService userService) {
         this.channelService = channelService;
         this.telegramSender = telegramSender;
         this.postService = postService;
         this.postServiceText = postServiceText;
         this.buttonService = buttonService;
+        this.userService = userService;
     }
 
     @Override
@@ -38,20 +38,27 @@ public class MessageHandler implements Handler<Update> {
             switch (message.getText()) {
                 case "/start":
                     buttonService.generateButton(update);
+                    if (!userService.isUserRegister(message)) {
+                        userService.saveUser(message);
+                    } else if(channelService.isUserHaveChannel(message)) {
+                        userService.setPosition(message, "DEFAULT_POSITION");
+                    } else {
+                        userService.setPosition(message, "START_BOT");
+                    }
                     telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.START_MESSAGE, String.valueOf(message.getChatId())));
                     return;
                 case "/add":
-                    flagController.setTakeChannelFlag(true);
+                    userService.setPosition(message, "ADD_CHANNEL");
                     telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.ADD_CHANNEL, String.valueOf(message.getChatId())));
                     return;
                 case "/help":
                     telegramSender.send(MessageService.createSendMessageWithMaxLength(Constants.HELP, String.valueOf(message.getChatId())));
                     return;
                 case "Создать пост":
-                    flagController.setNewPost(true);
-
-                    postService.chooseChannel(message);
-                    postServiceText.chooseChannel(message);
+                    userService.setPosition(message, "CREATE_POST");
+                    Channel channel = channelService.chooseChannel(message);
+                    postService.setChannel(channel);
+                    postServiceText.setChannel(channel);
                     return;
                 case "Отложенные":
                     return;
@@ -64,36 +71,27 @@ public class MessageHandler implements Handler<Update> {
             }
         }
 
-        if (message.getForwardFromChat() != null && flagController.isTakeChannelFlag()) {
-            flagController.setTakeChannelFlag(false);
+        if (message.getForwardFromChat() != null && userService.getUser(message).getPosition().equals("ADD_CHANNEL")) {
             channelService.addChannel(update);
             return;
         }
 
-//        if (flagController.isAddMedia()) {
-//            flagController.setAddMedia(false);
-//            postService.addMedia(message);
-//            return;
-//        }
-
-        if (flagController.isAddText()) {
-            flagController.setAddText(false);
-
-            if (postServiceText.getSendMessage() != null) {
-                postServiceText.addText(message);
-                return;
-            }
-
-            postService.addText(message);
-            return;
-        }
-
-        if (flagController.isNewPost()) {
+        if (userService.getUser(message).getPosition().equals("CREATE_POST")) {
             if (message.hasText()) {
                 postServiceText.createPost(message);
                 return;
             }
             postService.createPost(message);
+        }
+
+
+        if (userService.getUser(message).getPosition().equals("CHANGE_TEXT")) {
+            if (postServiceText.getSendMessage() != null) {
+                postServiceText.addText(message);
+                return;
+            }
+            postService.addText(message);
+            return;
         }
     }
 }

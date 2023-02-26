@@ -1,11 +1,13 @@
 package com.suttori.demobottty3.entity;
 
+import com.suttori.demobottty3.entity.enums.Position;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
 import java.sql.Timestamp;
 
 @Entity(name = "\"user\"")
+//@Entity(name = "usr")
 public class User {
 
     @Id
@@ -15,7 +17,42 @@ public class User {
     private String lastName;
     private String userName;
     private Timestamp registerTime;
+    private String position;
+    private boolean isTelegramPremium;
+    private String languageCode;
+    private boolean isPremiumBotUser;
 
+    public boolean isTelegramPremium() {
+        return isTelegramPremium;
+    }
+
+    public void setTelegramPremium(boolean telegramPremium) {
+        isTelegramPremium = telegramPremium;
+    }
+
+    public String getLanguageCode() {
+        return languageCode;
+    }
+
+    public void setLanguageCode(String languageCode) {
+        this.languageCode = languageCode;
+    }
+
+    public boolean isPremiumBotUser() {
+        return isPremiumBotUser;
+    }
+
+    public void setPremiumBotUser(boolean premiumBotUser) {
+        isPremiumBotUser = premiumBotUser;
+    }
+
+    public String getPosition() {
+        return position;
+    }
+
+    public void setPosition(String position) {
+        this.position = position;
+    }
 
     public Long getChatId() {
         return chatId;

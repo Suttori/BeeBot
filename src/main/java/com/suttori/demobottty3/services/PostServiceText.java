@@ -3,8 +3,10 @@ package com.suttori.demobottty3.services;
 import com.suttori.demobottty3.dao.ChannelRepository;
 import com.suttori.demobottty3.entity.Channel;
 import com.suttori.demobottty3.entity.Post;
+import com.suttori.demobottty3.entity.enums.Position;
 import com.suttori.demobottty3.telegram.TelegramSender;
 import com.suttori.demobottty3.util.Constants;
+import com.suttori.demobottty3.util.PostUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.CopyMessage;
@@ -27,9 +29,11 @@ import java.util.List;
 public class PostServiceText {
 
     TelegramSender telegramSender;
-    List<Channel> channels;
     SendMessage sendMessage;
+    ChannelService channelService;
+    PostUtils postUtils;
 
+    Channel channel;
 
     public SendMessage getSendMessage() {
         return sendMessage;
@@ -42,53 +46,19 @@ public class PostServiceText {
     String successMessage;
 
     @Autowired
-    public PostServiceText(TelegramSender telegramSender) {
+    public PostServiceText(TelegramSender telegramSender, ChannelService channelService, PostUtils postUtils) {
         this.telegramSender = telegramSender;
+        this.channelService = channelService;
+        this.postUtils = postUtils;
     }
 
-    public void chooseChannel(Message message) {
-        channels = channelRepository.findChannelByUserId(message.getChatId());
-
-        if (channels.isEmpty()) {
-            errorMessage = "Вы не добавили ни одного канала в бота. Чтобы Добавить канал нажмите /add и следуйте дальнейшим инструкциям.";
-            SendMessage sendMessage = SendMessage.builder()
-                    .text(errorMessage)
-                    .chatId(message.getChatId())
-                    .build();
-            telegramSender.send(sendMessage);
-        }
-
-        if (channels.size() > 1) {
-            successMessage = "Выберите канал, в который хотите опубликовать пост";
-            SendMessage sendMessage = SendMessage.builder()
-                    .text(successMessage)
-                    .chatId(message.getChatId())
-                    .build();
-            telegramSender.send(sendMessage);
-            //TODO
-        }
-
-        if (channels.size() == 1) {
-            successMessage = Constants.CREATE_POST;
-            SendMessage sendMessage = SendMessage.builder()
-                    .text(successMessage)
-                    .chatId(message.getChatId())
-                    .build();
-            telegramSender.send(sendMessage);
-        }
+    public void setChannel(Channel channel) {
+        this.channel = channel;
     }
 
     public void publish(CallbackQuery callbackQuery) {
         telegramSender.send(sendMessage);
         sendMessage = null;
-//        if (post.getSendMessage() != null) {
-//            telegramSender.send(post.getSendMessage());
-//            post.setSendMessage(null);
-//        }
-//        if (post.getSendPhoto() != null) {
-//            telegramSender.sendPhoto(post.getSendPhoto());
-//            post.setSendPhoto(null);
-//        }
 
         Integer messageId = callbackQuery.getMessage().getMessageId();
         var editMessageText = new EditMessageText();
@@ -98,45 +68,6 @@ public class PostServiceText {
 
         telegramSender.sendEditMessage(editMessageText);
     }
-
-
-    public void cancelCreatePost(CallbackQuery callbackQuery) {
-        deleteMessageCallbackQuery(callbackQuery);
-    }
-
-    public void deleteMessageCallbackQuery(CallbackQuery callbackQuery) {
-        String chatId = String.valueOf(callbackQuery.getMessage().getChatId());
-        Integer messageId = callbackQuery.getMessage().getMessageId();
-        DeleteMessage deleteMessage = new DeleteMessage(chatId, messageId);
-        try {
-            telegramSender.execute(deleteMessage);
-        } catch (TelegramApiException tae) {
-            throw new RuntimeException(tae);
-        }
-    }
-
-    public void deleteCopyMessage(CopyMessage copyMessage) {
-        String chatId = copyMessage.getChatId();
-        Integer messageId = copyMessage.getMessageId();
-        DeleteMessage deleteMessage = new DeleteMessage(chatId, messageId);
-        try {
-            telegramSender.execute(deleteMessage);
-        } catch (TelegramApiException tae) {
-            throw new RuntimeException(tae);
-        }
-    }
-
-    public void deleteMessage(Message message) {
-        String chatId = String.valueOf(message.getChatId());
-        Integer messageId = message.getMessageId();
-        DeleteMessage deleteMessage = new DeleteMessage(chatId, messageId);
-        try {
-            telegramSender.execute(deleteMessage);
-        } catch (TelegramApiException tae) {
-            throw new RuntimeException(tae);
-        }
-    }
-
 
     public void createMessagePost(Message message) {
         sendMessage = new SendMessage();
@@ -148,12 +79,10 @@ public class PostServiceText {
         createMessagePost(message);
         sendMessage.setReplyMarkup(createButtonPost());
         telegramSender.send(sendMessage);
-
-
     }
 
     public void addTextButton(CallbackQuery callbackQuery) {
-        deleteMessageCallbackQuery(callbackQuery);
+        postUtils.deleteMessageCallbackQuery(callbackQuery);
     }
 
     public void addText(Message message) {
@@ -161,7 +90,7 @@ public class PostServiceText {
             sendMessage.setText(message.getText());
             sendMessage.setReplyMarkup(createButtonPost());
             telegramSender.send(sendMessage);
-            deleteMessage(message);
+            postUtils.deleteMessage(message);
         }
     }
 
@@ -171,12 +100,12 @@ public class PostServiceText {
         inlineKeyboardMarkupPlug.setKeyboard(keyboardPlug);
         sendMessage.setReplyMarkup(inlineKeyboardMarkupPlug);
         telegramSender.send(sendMessage);
-        sendMessage.setChatId(String.valueOf(channels.get(0).getChannelId()));
+        sendMessage.setChatId(String.valueOf(channel.getChannelId()));
     }
 
     public void nextButton(CallbackQuery callbackQuery) {
         prepareForPost();
-        deleteMessageCallbackQuery(callbackQuery);
+        postUtils.deleteMessageCallbackQuery(callbackQuery);
 
         SendMessage message = new SendMessage();
         message.setChatId(callbackQuery.getMessage().getChatId());

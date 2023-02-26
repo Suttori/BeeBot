@@ -10,7 +10,6 @@ import java.util.List;
 @Repository
 public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
-
     List<Channel> findChannelByUserId(@Param("user_id") Long id);
 
 }
