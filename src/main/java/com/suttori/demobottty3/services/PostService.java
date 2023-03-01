@@ -11,12 +11,13 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.CopyMessage;
 import org.telegram.telegrambots.meta.api.methods.send.*;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.*;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
 
 import java.util.*;
 
@@ -29,6 +30,14 @@ public class PostService {
     Message messagePost;
     CopyMessage copyMessage;
     ChannelService channelService;
+    private List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+
+    List<MessageId> messageIds = new ArrayList<>();
+
+    //TODO остаются старые кнопки, текстовое сообщение дублируется
+
+    MessageId messageId;
 
     @Autowired
     ChannelRepository channelRepository;
@@ -45,7 +54,10 @@ public class PostService {
     }
 
     public void publish(CallbackQuery callbackQuery) {
+
+
         telegramSender.sendCopyMessage(copyMessage);
+
         messagePost = null;
 
         Integer messageId = callbackQuery.getMessage().getMessageId();
@@ -78,11 +90,22 @@ public class PostService {
     public void createPost(Message message) {
         createMessagePost(message);
         copyMessage = copyMessage(message);
-        copyMessage.setReplyMarkup(createButtonPost());
-        telegramSender.sendCopyMessage(copyMessage);
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        inlineKeyboardMarkup.setKeyboard(createButtonPost(keyboard));
+        copyMessage.setReplyMarkup(inlineKeyboardMarkup);
+
+
+        messageIds.add(telegramSender.sendCopyMessage(copyMessage));
     }
 
-    public void addTextButton(CallbackQuery callbackQuery) {
+
+    public void cancelCreatePost() {
+        messagePost = null;
+        keyboard = new ArrayList<>();
+    }
+
+    public void deletePreviousMessage(CallbackQuery callbackQuery) {
         postUtils.deleteMessageCallbackQuery(callbackQuery);
     }
 
@@ -90,7 +113,10 @@ public class PostService {
         if (message.hasText()) {
             messagePost.setCaption(message.getText());
             copyMessage = copyMessage(messagePost);
-            copyMessage.setReplyMarkup(createButtonPost());
+            InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> keyboard1 = new ArrayList<>(keyboard);
+            inlineKeyboardMarkup.setKeyboard(createButtonPost(keyboard1));
+            copyMessage.setReplyMarkup(inlineKeyboardMarkup);
             telegramSender.sendCopyMessage(copyMessage);
             postUtils.deleteMessage(message);
         }
@@ -99,20 +125,21 @@ public class PostService {
     }
 
     public void prepareForPost() {
-        InlineKeyboardMarkup inlineKeyboardMarkupPlug = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> keyboardPlug = new ArrayList<>();
-        inlineKeyboardMarkupPlug.setKeyboard(keyboardPlug);
 
-        copyMessage.setReplyMarkup(inlineKeyboardMarkupPlug);
-        //copyMessage = copyMessage(messagePost);
-        telegramSender.sendCopyMessage(copyMessage);
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+        copyMessage.setReplyMarkup(inlineKeyboardMarkup);
+
+
+        messageId = telegramSender.sendCopyMessage(copyMessage);
         copyMessage.setChatId(String.valueOf(channel.getChannelId()));
 
     }
 
     public void nextButton(CallbackQuery callbackQuery) {
+
         prepareForPost();
-        postUtils.deleteMessageCallbackQuery(callbackQuery);
+        //postUtils.deleteMessageCallbackQuery(callbackQuery);
 
         SendMessage message = new SendMessage();
         message.setChatId(callbackQuery.getMessage().getChatId());
@@ -158,15 +185,36 @@ public class PostService {
         telegramSender.send(message);
     }
 
-    public void addCustomButton(CallbackQuery callbackQuery) {
 
+    public void backButton(CallbackQuery callbackQuery) {
+
+        deletePreviousMessage(callbackQuery);
+        // postUtils.deleteMessageById(String.valueOf(callbackQuery.getMessage().getChatId()), messageId);
+        copyMessage.setChatId(callbackQuery.getMessage().getChatId());
+        var editMessageReplyMarkup = new EditMessageReplyMarkup();
+        editMessageReplyMarkup.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
+        editMessageReplyMarkup.setMessageId(Math.toIntExact(messageId.getMessageId()));
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard1 = new ArrayList<>(keyboard);
+        inlineKeyboardMarkup.setKeyboard(createButtonPost(keyboard1));
+        editMessageReplyMarkup.setReplyMarkup(inlineKeyboardMarkup);
+
+
+        telegramSender.sendEditMessageReplyMarkup(editMessageReplyMarkup);
+
+        //createButtonPost()
+        //  telegramSender.sendCopyMessage(copyMessage);
     }
+
 
     public EditMessageReplyMarkup createEditReplyMarkup(CallbackQuery callbackQuery) {
         var editMessageReplyMarkup = new EditMessageReplyMarkup();
         editMessageReplyMarkup.setChatId(String.valueOf(callbackQuery.getMessage().getChatId()));
         editMessageReplyMarkup.setMessageId(callbackQuery.getMessage().getMessageId());
-        editMessageReplyMarkup.setReplyMarkup(createButtonPost());
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboard1 = new ArrayList<>(keyboard);
+        inlineKeyboardMarkup.setKeyboard(createButtonPost(keyboard1));
+        editMessageReplyMarkup.setReplyMarkup(inlineKeyboardMarkup);
         return editMessageReplyMarkup;
     }
 
@@ -179,10 +227,17 @@ public class PostService {
         telegramSender.sendEditMessageReplyMarkup(createEditReplyMarkup(callbackQuery));
     }
 
+    public void addCustomButton(Message message) {
 
-    public InlineKeyboardMarkup createButtonPost() {
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        keyboard = postUtils.createCustomButton(message, new ArrayList<>());
+        List<List<InlineKeyboardButton>> keyboard1 = new ArrayList<>(keyboard);
+        inlineKeyboardMarkup.setKeyboard(createButtonPost(keyboard1));
+        copyMessage.setReplyMarkup(inlineKeyboardMarkup);
+        telegramSender.sendCopyMessage(copyMessage);
+    }
+
+    public List<List<InlineKeyboardButton>> createButtonPost(List<List<InlineKeyboardButton>> keyboard) {
         List<InlineKeyboardButton> rowInLineOne = new ArrayList<>();
         List<InlineKeyboardButton> rowInLineTwo = new ArrayList<>();
         List<InlineKeyboardButton> rowInLineThree = new ArrayList<>();
@@ -198,23 +253,32 @@ public class PostService {
         var cancel = new InlineKeyboardButton();
         var next = new InlineKeyboardButton();
 
-        if (messagePost.hasPhoto() || messagePost.hasAudio() || messagePost.hasAnimation() ||
-                messagePost.hasVideo()) {
-            ///TODO
-            if (messagePost.getCaption() != null) {
-                addMediaOrText.setText("Изменить текст");
-            } else {
-                addMediaOrText.setText("Добавить текст");
-            }
-            addMediaOrText.setCallbackData("add_text");
-            rowInLineOne.add(addMediaOrText);
-        }
 
-        if (messagePost.getMediaGroupId() == null) {
-            addButton.setText("Добавить кнопки");
-            addButton.setCallbackData("add_button");
-            rowInLineOne.add(addButton);
+        ///TODO
+        if (messagePost.getCaption() != null) {
+            addMediaOrText.setText("Изменить текст");
+        } else {
+            addMediaOrText.setText("Добавить текст");
         }
+        addMediaOrText.setCallbackData("add_text");
+        rowInLineOne.add(addMediaOrText);
+
+
+
+        //TODO "изменить кнопки"
+        if (keyboard.isEmpty()) {
+            addButton.setText("Добавить кнопки");
+        } else {
+            addButton.setText("Изменить кнопки");
+        }
+        addButton.setCallbackData("add_button");
+        rowInLineOne.add(addButton);
+
+//        if (messagePost.getMediaGroupId() == null) {
+//            addButton.setText("Добавить кнопки");
+//            addButton.setCallbackData("add_button");
+//            rowInLineOne.add(addButton);
+//        }
 
         if (copyMessage.getDisableNotification() == null) {
             notification.setText("Уведомление: вкл");
@@ -248,9 +312,7 @@ public class PostService {
         keyboard.add(rowInLineThree);
         keyboard.add(rowInLineFour);
         keyboard.add(rowInLineFive);
-
-        inlineKeyboardMarkup.setKeyboard(keyboard);
-        return inlineKeyboardMarkup;
+        return keyboard;
     }
 
     public CopyMessage copyMessage(Message message) {

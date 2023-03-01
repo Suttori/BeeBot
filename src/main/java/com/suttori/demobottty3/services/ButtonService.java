@@ -24,7 +24,6 @@ public class ButtonService {
     }
 
     public void generateButton(Update update) {
-
         var markup = new ReplyKeyboardMarkup();
         var keyboardRows = new ArrayList<KeyboardRow>();
 
@@ -39,7 +38,7 @@ public class ButtonService {
         markup.setKeyboard(keyboardRows);
         markup.setResizeKeyboard(true);
         SendMessage sendMessage = new SendMessage();
-        sendMessage.setText(" ");
+        sendMessage.setText("button");
         sendMessage.setChatId(update.getMessage().getChatId());
         sendMessage.setReplyMarkup(markup);
         telegramSender.sendReplyKeyboardMarkup(sendMessage);

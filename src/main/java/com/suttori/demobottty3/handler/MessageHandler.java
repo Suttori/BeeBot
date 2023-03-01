@@ -77,10 +77,10 @@ public class MessageHandler implements Handler<Update> {
         }
 
         if (userService.getUser(message).getPosition().equals("CREATE_POST")) {
-            if (message.hasText()) {
-                postServiceText.createPost(message);
-                return;
-            }
+//            if (message.hasText()) {
+//                postServiceText.createPost(message);
+//                return;
+//            }
             postService.createPost(message);
         }
 
@@ -93,5 +93,19 @@ public class MessageHandler implements Handler<Update> {
             postService.addText(message);
             return;
         }
+
+
+        if(userService.getUser(message).getPosition().equals("ADD_BUTTONS")) {
+
+            if (postServiceText.getSendMessage() != null) {
+                postServiceText.addCustomButton(message);
+                return;
+            }
+            postService.addCustomButton(message);
+            return;
+
+
+        }
+
     }
 }

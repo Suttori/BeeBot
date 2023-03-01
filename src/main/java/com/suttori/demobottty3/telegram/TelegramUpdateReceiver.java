@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.meta.api.methods.CopyMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.MessageId;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -24,9 +25,7 @@ public class TelegramUpdateReceiver implements LongPollingBot {
     private final DefaultBotOptions botOptions;
     private Processor processor;
 
-
     TelegramSender telegramSender;
-
 
     public TelegramUpdateReceiver(
             BotConfig config,
@@ -54,7 +53,31 @@ public class TelegramUpdateReceiver implements LongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+//
+//        String text = "FIFA - will never  regret it";
+//
+//        //String[] words = text.split("\\|(|\\s*|,| ! |\\.)");
+//        String[] words2 = text.split("\\s-\\s");
+//        //String[] words = text.split("\\n");
+//        for(String word : words2){
+//            System.out.println(word);
+//        }
 
+//        if (update.hasMessage()) {
+//            if (update.getMessage().getFrom().getUserName().equals("Vladyss10")) {
+//                SendMessage sendMessage = new SendMessage();
+//                sendMessage.setChatId(update.getMessage().getChatId());
+//                sendMessage.setText("Бан нахуй, иди в пизду, долбаеб дырявый");
+//                telegramSender.send(sendMessage);
+//                return;
+//            } else if (update.getMessage().getFrom().getUserName().equals("EUG_TG")) {
+//                SendMessage sendMessage1 = new SendMessage();
+//                sendMessage1.setChatId(update.getMessage().getChatId());
+//                sendMessage1.setText("Думаешь самый умный? пошел нахуй долбаеб");
+//                telegramSender.send(sendMessage1);
+//                return;
+//            }
+//        }
 
         processor.process(update);
     }

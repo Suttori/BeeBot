@@ -8,6 +8,7 @@ import com.suttori.demobottty3.telegram.TelegramSender;
 import com.suttori.demobottty3.util.PostUtils;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.objects.Message;
 
 @Component
 public class CallbackQueryHandler implements Handler<CallbackQuery> {
@@ -34,14 +35,21 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                 telegramSender.send(MessageService.createSendMessageWithMaxLength("Отправьте текст, на который хотите заменить описание/пост", String.valueOf(callbackQuery.getMessage().getChatId())));
                 userService.setPosition(callbackQuery.getMessage(), "CHANGE_TEXT");
                 if (postServiceText.getSendMessage() != null) {
-                    postServiceText.addTextButton(callbackQuery);
+                    postServiceText.deletePreviousMessage(callbackQuery);
                     return;
                 }
-                postService.addTextButton(callbackQuery);
+                postService.deletePreviousMessage(callbackQuery);
                 break;
             case "add_button":
+                telegramSender.send(MessageService.createSendMessageWithMaxLength("Отправьте кнопки, которые хотите прикрепить к посту", String.valueOf(callbackQuery.getMessage().getChatId())));
                 userService.setPosition(callbackQuery.getMessage(), "ADD_BUTTONS");
-                postService.addCustomButton(callbackQuery);
+                if (postServiceText.getSendMessage() != null) {
+                    postServiceText.deletePreviousMessage(callbackQuery);
+                    return;
+                }
+                postService.deletePreviousMessage(callbackQuery);
+
+
                 break;
             case "notification":
                 //TODO
@@ -64,6 +72,8 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                 //TODO
                 break;
             case "cancel_create_post":
+                postService.cancelCreatePost();
+                postServiceText.cancelCreatePost();
                 userService.setPosition(callbackQuery.getMessage(), "DEFAULT_POSITION");
                 postUtils.deleteMessageCallbackQuery(callbackQuery);
                 telegramSender.send(MessageService.createSendMessageWithMaxLength("Создание поста отменено", String.valueOf(callbackQuery.getMessage().getChatId())));
@@ -87,7 +97,11 @@ public class CallbackQueryHandler implements Handler<CallbackQuery> {
                 //TODO
                 break;
             case "cancel_next_button":
-                //TODO
+                postService.backButton(callbackQuery);
+
+
+
+
                 break;
             case "publish":
                 userService.setPosition(callbackQuery.getMessage(), "DEFAULT_POSITION");

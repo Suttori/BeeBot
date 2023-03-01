@@ -77,7 +77,7 @@ public class ChannelService {
 
     public Channel chooseChannel(Message message) {
         List<Channel> channels = channelRepository.findChannelByUserId(message.getChatId());
-
+        //TODO вы уже не являетесь админом канала
         if (channels.isEmpty()) {
             errorMessage = "Вы не добавили ни одного канала в бота. Чтобы Добавить канал нажмите /add и следуйте дальнейшим инструкциям.";
             SendMessage sendMessage = SendMessage.builder()

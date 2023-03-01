@@ -17,6 +17,7 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.MessageId;
 import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -55,13 +56,14 @@ public class TelegramSender extends DefaultAbsSender {
         }
     }
 
-    public void sendCopyMessage(CopyMessage copyMessage) {
+    public MessageId sendCopyMessage(CopyMessage copyMessage) {
         try {
             logger.info("Sending message to " + copyMessage.getChatId());
-            execute(copyMessage);
+            return execute(copyMessage);
         } catch (TelegramApiException e) {
             logger.error("Error during sending message", e);
         }
+        return null;
     }
 
     public SendPhoto sendPhoto(SendPhoto sendPhoto) {
@@ -73,10 +75,6 @@ public class TelegramSender extends DefaultAbsSender {
         }
         return null;
     }
-
-
-
-
 
     public void sendReplyKeyboardMarkup(SendMessage sendMessage) {
         try {
@@ -96,11 +94,8 @@ public class TelegramSender extends DefaultAbsSender {
         }
     }
 
-
-
     public void deleteMessage(CopyMessage message) {
         try {
-
             execute(new DeleteMessage("@SpringDemoMess_bot", message.getMessageId()));
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
@@ -126,9 +121,7 @@ public class TelegramSender extends DefaultAbsSender {
         try {
             List<ChatMember> chatMembers = execute(new GetChatAdministrators(String.valueOf(message.getForwardFromChat().getId())));
             User user = execute(new GetMe());
-            System.out.println(user);
             for (ChatMember member: chatMembers) {
-                System.out.println(member.getUser());
                 if (member.getUser().getId().equals(user.getId())){
                     return true;
                 }
